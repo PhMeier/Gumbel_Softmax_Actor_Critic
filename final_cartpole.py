@@ -12,13 +12,13 @@ import gym
 # Hyper Parameters
 STATE_DIM = 4
 ACTION_DIM = 2
-STEP = 3000
-SAMPLE_NUMS = 5 #30
+STEP = 5000
+SAMPLE_NUMS = 15
 
-temperature = 0.5
+temperature = 0.25 #1.0
 latent_dim = 25 # 50
 categorical_dim = 2
-HIDDEN_SIZE= 128 #64 #32
+HIDDEN_SIZE= 32 #512#128 # 64
 
 
 def sample_gumbel(shape, eps=1e-20):
@@ -52,6 +52,7 @@ def gumbel_softmax(logits, temperature, hard=False):
     return y_hard.view(-1, categorical_dim)
 
 
+
 class ActorNetwork(nn.Module):
 
     def __init__(self,input_size,hidden_size,action_size):
@@ -61,9 +62,10 @@ class ActorNetwork(nn.Module):
         self.fc3 = nn.Linear(hidden_size,action_size)
 
     def forward(self,x):
+        out = F.normalize(x, dim=0)
         out = F.relu(self.fc1(x))
         out = F.relu(self.fc2(out))
-        out = F.log_softmax(self.fc3(out))
+        out = F.log_softmax(self.fc3(out)) #log_softmax
         return out
 
 
@@ -93,7 +95,7 @@ class ValueNetwork(nn.Module):
 
         #state_action = out_state2 + out_action2
         state_action = torch.add(out_state2, out_action2)
-        out = self.fc3(state_action)
+        out = torch.tanh(self.fc3(state_action))
         #out = out.squeeze() # die line ist es nicht
         #out = Variable(out.data, requires_grad=True)
         return out
@@ -176,16 +178,14 @@ def main():
     init_state = task.reset()
 
     # init value network
-    value_network = ValueNetwork(input_size = STATE_DIM,hidden_size = HIDDEN_SIZE,output_size = 1, action_size=ACTION_DIM)
-    value_network_optim = torch.optim.Adam(value_network.parameters(),lr=0.0001) # 0000001
-    # beste mit value_network_optim = torch.optim.SGD(value_network.parameters(), lr = 0.0001)
-    #value_network_optim = torch.optim.SGD(value_network.parameters(), lr = 0.0001) #0.1
+    value_network = ValueNetwork(input_size = STATE_DIM, hidden_size = HIDDEN_SIZE, output_size = 1, action_size=ACTION_DIM)
+    value_network_optim = torch.optim.Adam(value_network.parameters(),lr=0.0001)
+    value_network_optim = torch.optim.SGD(value_network.parameters(), lr = 0.00001) #0.1
 
     # init actor network
     actor_network = ActorNetwork(STATE_DIM,HIDDEN_SIZE,ACTION_DIM)
-    actor_network_optim = torch.optim.Adam(actor_network.parameters(),lr = 0.000001, weight_decay=0.01) # 0000001
-    # beste mit actor_network_optim = torch.optim.SGD(actor_network.parameters(), lr=0.0001)
-    #actor_network_optim = torch.optim.SGD(actor_network.parameters(), lr=0.00000001) #0.1 # 00001
+    actor_network_optim = torch.optim.Adam(actor_network.parameters(),lr = 0.0001)
+    actor_network_optim = torch.optim.SGD(actor_network.parameters(), lr=0.0000001) #0.1 # 0.000001
 
     steps = []
     task_episodes = []
@@ -206,7 +206,7 @@ def main():
             actor_network_optim.zero_grad()
             vs = value_network(states_var, actions_var)#.detach() # detach in order not to backprop through critic
             #vs = vs.detach()
-            actor_network_loss = -torch.sum(vs) # calculate actor loss
+            actor_network_loss = -torch.sum(vs)
             #print(actor_network_loss)
             #actor_network_loss.requires_grad = True
             actor_network_loss.backward(inputs = list(actor_network.parameters()), retain_graph=True)
@@ -222,10 +222,12 @@ def main():
             #print(value_network_loss)
             #torch.autograd.set_detect_anomaly(True)
             value_network_loss.backward(inputs=list(value_network.parameters()))
+            torch.nn.utils.clip_grad_norm(actor_network.parameters(), 0.0001)
             actor_network_optim.step()
             value_network_optim.step()
             collected_value_network_loss.append(value_network_loss)
             collected_actor_network_loss.append(actor_network_loss)
+
             #plot_grad_flow(actor_network.named_parameters())
             if step%500 == 0:
                 print(step)
@@ -251,7 +253,7 @@ def main():
                             result += reward
                             state = next_state
                             if done:
-                                task.reset()
+                                #task.reset()
                                 break
                     print("step:",step+1,"test result:",result/10.0)
                     steps.append(step+1)
@@ -267,6 +269,8 @@ def main():
     state = task.reset()
     done = False
     cnt = 0
+    avg_step = 0
+    i = 0
     while True:
         cnt += 1
         task.render()
@@ -280,14 +284,19 @@ def main():
         # Lets see how long it lasts until failing
         #"""
         if done:
-            task.reset()
+            #print(i)
             print(f"Game lasted {cnt} moves")
+            avg_step += cnt
             cnt=0
-        else:
-            continue
-        #"""
-    print(f"Game lasted {cnt} moves")
+            task.reset()
+            i+=1
+        if i==100:
+            break
 
+        #"""
+    task.close()
+    #print(f"Game lasted {cnt} moves")
+    print("Average steps: ", avg_step/100)
 
 if __name__ == '__main__':
     main()
