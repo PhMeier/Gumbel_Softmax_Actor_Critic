@@ -6,6 +6,7 @@ from torch.nn import functional as F
 import gym
 import torch.multiprocessing as mp  # A
 
+# Source: https://github.com/floodsung/a2c_cartpole_pytorch
 
 class ActorCritic(nn.Module):  # B
     def __init__(self):
