@@ -6,7 +6,7 @@ from torch.nn import functional as F
 import gym
 import torch.multiprocessing as mp #A
 
-# Took from https://github.com/floodsung/a2c_cartpole_pytorch
+# Took from https://github.com/DeepReinforcementLearning/DeepReinforcementLearningInAction/blob/master/Chapter%205/Ch5_book.ipynb
 
 temperature = 0.25
 latent_dim = 40

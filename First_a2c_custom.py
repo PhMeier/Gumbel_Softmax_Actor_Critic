@@ -20,7 +20,7 @@ latent_dim = 25 # 50
 categorical_dim = 2
 HIDDEN_SIZE= 32 #512#128 # 64
 
-# Source: https://github.com/DeepReinforcementLearning/DeepReinforcementLearningInAction/blob/master/Chapter%205/Ch5_book.ipynb
+# Source: https://github.com/floodsung/a2c_cartpole_pytorch
 
 
 def sample_gumbel(shape, eps=1e-20):

@@ -6,7 +6,7 @@ from torch.nn import functional as F
 import gym
 import torch.multiprocessing as mp  # A
 
-# Source: https://github.com/floodsung/a2c_cartpole_pytorch
+# Source: https://github.com/DeepReinforcementLearning/DeepReinforcementLearningInAction/blob/master/Chapter%205/Ch5_book.ipynb
 
 class ActorCritic(nn.Module):  # B
     def __init__(self):
